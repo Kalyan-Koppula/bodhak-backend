@@ -1,0 +1,36 @@
+-- Migration number: 0001 	 2025-10-18T16:30:16.948Z
+-- schema.sql
+CREATE TABLE
+IF NOT EXISTS subjects
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    rank TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE
+IF NOT EXISTS topics
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    rank TEXT NOT NULL,
+    FOREIGN KEY
+(subject_id) REFERENCES subjects
+(id) ON
+DELETE CASCADE
+);
+
+CREATE TABLE
+IF NOT EXISTS articles
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    rank TEXT NOT NULL,
+    FOREIGN KEY
+(topic_id) REFERENCES topics
+(id) ON
+DELETE CASCADE
+);
