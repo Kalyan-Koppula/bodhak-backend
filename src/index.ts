@@ -96,12 +96,12 @@ app.post('/api/admin/login', loginHandler);
 app.post('/api/admin/logout', logoutHandler);
 
 // Apply JWT authentication middleware to all admin routes
-const adminRoutes = app.use('/api/admin/*', async (c, next) => {
+app.use('/api/admin/*', async (c, next) => {
   return jwtAuth(c.env.JWT_SECRET)(c, next);
 });
 
 // --- Subject Admin Routes ---
-adminRoutes.post('/subjects', zValidator('json', SubjectSchema), async (c) => {
+app.post('/api/admin/subjects', zValidator('json', SubjectSchema), async (c) => {
   const { title } = c.req.valid('json');
 
   const { results } = await c.env.bodhak
@@ -118,14 +118,14 @@ adminRoutes.post('/subjects', zValidator('json', SubjectSchema), async (c) => {
   return c.json({ message: 'Subject created', rank: newRank.toString() }, 201);
 });
 
-adminRoutes.put('/subjects/:id', zValidator('json', SubjectSchema), async (c) => {
+app.put('/api/admin/subjects/:id', zValidator('json', SubjectSchema), async (c) => {
   const { id } = c.req.param();
   const { title } = c.req.valid('json');
   await c.env.bodhak.prepare('UPDATE subjects SET title = ? WHERE id = ?').bind(title, id).run();
   return c.json({ message: 'Subject updated' });
 });
 
-adminRoutes.post('/subjects/reorder', zValidator('json', ReorderSchema), async (c) => {
+app.post('/api/admin/subjects/reorder', zValidator('json', ReorderSchema), async (c) => {
   const { id, beforeRank, afterRank } = c.req.valid('json');
   const newRank = calculateNewRank(beforeRank, afterRank);
 
@@ -138,14 +138,14 @@ adminRoutes.post('/subjects/reorder', zValidator('json', ReorderSchema), async (
   return c.json({ message: 'Subject reordered', newRank: newRank.toString() });
 });
 
-adminRoutes.delete('/subjects/:id', async (c) => {
+app.delete('/api/admin/subjects/:id', async (c) => {
   const { id } = c.req.param();
   await c.env.bodhak.prepare('DELETE FROM subjects WHERE id = ?').bind(id).run();
   return c.json({ message: 'Subject deleted' });
 });
 
 // --- Topic Admin Routes ---
-adminRoutes.post('/topics', zValidator('json', TopicSchema), async (c) => {
+app.post('/api/admin/topics', zValidator('json', TopicSchema), async (c) => {
   const { title, subjectId } = c.req.valid('json');
 
   const { results } = await c.env.bodhak
@@ -162,7 +162,7 @@ adminRoutes.post('/topics', zValidator('json', TopicSchema), async (c) => {
   return c.json({ message: 'Topic created', rank: newRank.toString() }, 201);
 });
 
-adminRoutes.put('/topics/:id', zValidator('json', TopicSchema), async (c) => {
+app.put('/api/admin/topics/:id', zValidator('json', TopicSchema), async (c) => {
   const { id } = c.req.param();
   const { title, subjectId } = c.req.valid('json');
   await c.env.bodhak
@@ -172,7 +172,7 @@ adminRoutes.put('/topics/:id', zValidator('json', TopicSchema), async (c) => {
   return c.json({ message: 'Topic updated' });
 });
 
-adminRoutes.post('/topics/reorder', zValidator('json', ReorderSchema), async (c) => {
+app.post('/api/admin/topics/reorder', zValidator('json', ReorderSchema), async (c) => {
   const { id, beforeRank, afterRank } = c.req.valid('json');
   const newRank = calculateNewRank(beforeRank, afterRank);
 
@@ -185,22 +185,25 @@ adminRoutes.post('/topics/reorder', zValidator('json', ReorderSchema), async (c)
   return c.json({ message: 'Topic reordered', newRank: newRank.toString() });
 });
 
-adminRoutes.delete('/topics/:id', async (c) => {
+app.delete('/api/admin/topics/:id', async (c) => {
   const { id } = c.req.param();
   await c.env.bodhak.prepare('DELETE FROM topics WHERE id = ?').bind(id).run();
   return c.json({ message: 'Topic deleted' });
 });
 
 // --- Article Admin Routes (with GitHub) ---
-adminRoutes.post('/articles', zValidator('json', ArticleSchema), async (c) => {
+app.post('/api/admin/articles', zValidator('json', ArticleSchema), async (c) => {
   const { title, topicId, content } = c.req.valid('json');
 
   const slug = title.replaceAll(/[^a-z0-9]/gi, '_').toLowerCase();
   const filePath = `articles/${slug}-${Date.now()}.json`;
 
   try {
-    // 1. Push content to GitHub
-    await createGitHubFile(c.env, filePath, content, `Added new article: ${title}`);
+    const useMockGH = c.req.header('x-test-mock-gh') === '1';
+    // 1. Push content to GitHub (skip in tests when we set the test header)
+    if (!useMockGH) {
+      await createGitHubFile(c.env, filePath, content, `Added new article: ${title}`);
+    }
 
     // 2. Insert metadata into D1 database
     const { results } = await c.env.bodhak
@@ -222,7 +225,7 @@ adminRoutes.post('/articles', zValidator('json', ArticleSchema), async (c) => {
   }
 });
 
-adminRoutes.put('/articles/:id', zValidator('json', ArticleSchema), async (c) => {
+app.put('/api/admin/articles/:id', zValidator('json', ArticleSchema), async (c) => {
   const { id } = c.req.param();
   const { title, topicId, content } = c.req.valid('json');
 
@@ -237,13 +240,15 @@ adminRoutes.put('/articles/:id', zValidator('json', ArticleSchema), async (c) =>
     const filePath = firstRow.file_path;
 
     // 1. Get SHA for the existing file to update it.
-    const fileSha = await getFileSha(c.env, filePath);
-    if (!fileSha) {
-      return c.json({ error: 'GitHub file not found for article.' }, 404);
-    }
+    const useMockGH = c.req.header('x-test-mock-gh') === '1';
+    let fileSha: string | null = null;
+    if (!useMockGH) {
+      fileSha = (await getFileSha(c.env, filePath)) ?? null;
+      if (!fileSha) return c.json({ error: 'GitHub file not found for article.' }, 404);
 
-    // 2. Update the file on GitHub
-    await updateGitHubFile(c.env, filePath, content, `Updated article: ${title}`, fileSha);
+      // 2. Update the file on GitHub
+      await updateGitHubFile(c.env, filePath, content, `Updated article: ${title}`, fileSha);
+    }
 
     // 3. Update the D1 database
     await c.env.bodhak
@@ -257,7 +262,7 @@ adminRoutes.put('/articles/:id', zValidator('json', ArticleSchema), async (c) =>
   }
 });
 
-adminRoutes.post('/articles/reorder', zValidator('json', ReorderSchema), async (c) => {
+app.post('/api/admin/articles/reorder', zValidator('json', ReorderSchema), async (c) => {
   const { id, beforeRank, afterRank } = c.req.valid('json');
   const newRank = calculateNewRank(beforeRank, afterRank);
 
@@ -270,7 +275,7 @@ adminRoutes.post('/articles/reorder', zValidator('json', ReorderSchema), async (
   return c.json({ message: 'Article reordered', newRank: newRank.toString() });
 });
 
-adminRoutes.delete('/articles/:id', async (c) => {
+app.delete('/api/admin/articles/:id', async (c) => {
   const { id } = c.req.param();
 
   try {
@@ -284,9 +289,12 @@ adminRoutes.delete('/articles/:id', async (c) => {
     const filePath = firstRow.file_path;
 
     // 1. Get the file SHA to delete the file from GitHub
-    const fileSha = await getFileSha(c.env, filePath);
-    if (fileSha) {
-      await deleteGitHubFile(c.env, filePath, fileSha, 'Deleted article');
+    const useMockGH = c.req.header('x-test-mock-gh') === '1';
+    if (!useMockGH) {
+      const fileSha = await getFileSha(c.env, filePath);
+      if (fileSha) {
+        await deleteGitHubFile(c.env, filePath, fileSha, 'Deleted article');
+      }
     }
 
     // 2. Delete the record from D1 database
