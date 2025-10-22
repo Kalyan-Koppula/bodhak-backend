@@ -59,18 +59,19 @@ const calculateNewRank = (
 
 // GET /api/subjects
 app.get('/api/subjects', async (c) => {
-  const { results } = await c.env.DB.prepare(
-    'SELECT id, title, rank FROM subjects ORDER BY rank ASC'
-  ).all<Subject>();
+  const { results } = await c.env.bodhak
+    .prepare('SELECT id, title, rank FROM subjects ORDER BY rank ASC')
+    .all<Subject>();
   return c.json(results);
 });
 
 // GET /api/subjects/:subjectId/topics
 app.get('/api/subjects/:subjectId/topics', async (c) => {
   const { subjectId } = c.req.param();
-  const { results } = await c.env.DB.prepare(
-    'SELECT id, subject_id, title, rank FROM topics WHERE subject_id = ? ORDER BY rank ASC'
-  )
+  const { results } = await c.env.bodhak
+    .prepare(
+      'SELECT id, subject_id, title, rank FROM topics WHERE subject_id = ? ORDER BY rank ASC'
+    )
     .bind(subjectId)
     .all<Topic>();
   return c.json(results);
@@ -79,9 +80,10 @@ app.get('/api/subjects/:subjectId/topics', async (c) => {
 // GET /api/topics/:topicId/articles
 app.get('/api/topics/:topicId/articles', async (c) => {
   const { topicId } = c.req.param();
-  const { results } = await c.env.DB.prepare(
-    'SELECT id, topic_id, title, file_path, rank FROM articles WHERE topic_id = ? ORDER BY rank ASC'
-  )
+  const { results } = await c.env.bodhak
+    .prepare(
+      'SELECT id, topic_id, title, file_path, rank FROM articles WHERE topic_id = ? ORDER BY rank ASC'
+    )
     .bind(topicId)
     .all<Article>();
   return c.json(results);
@@ -102,13 +104,14 @@ const adminRoutes = app.use('/api/admin/*', async (c, next) => {
 adminRoutes.post('/subjects', zValidator('json', SubjectSchema), async (c) => {
   const { title } = c.req.valid('json');
 
-  const { results } = await c.env.DB.prepare(
-    'SELECT rank FROM subjects ORDER BY rank DESC LIMIT 1'
-  ).all();
+  const { results } = await c.env.bodhak
+    .prepare('SELECT rank FROM subjects ORDER BY rank DESC LIMIT 1')
+    .all();
   const lastRank = results[0] ? LexoRank.parse((results[0] as { rank: string }).rank) : null;
   const newRank = lastRank ? lastRank.genNext() : LexoRank.middle();
 
-  await c.env.DB.prepare('INSERT INTO subjects (title, rank) VALUES (?, ?)')
+  await c.env.bodhak
+    .prepare('INSERT INTO subjects (title, rank) VALUES (?, ?)')
     .bind(title, newRank.toString())
     .run();
 
@@ -118,7 +121,7 @@ adminRoutes.post('/subjects', zValidator('json', SubjectSchema), async (c) => {
 adminRoutes.put('/subjects/:id', zValidator('json', SubjectSchema), async (c) => {
   const { id } = c.req.param();
   const { title } = c.req.valid('json');
-  await c.env.DB.prepare('UPDATE subjects SET title = ? WHERE id = ?').bind(title, id).run();
+  await c.env.bodhak.prepare('UPDATE subjects SET title = ? WHERE id = ?').bind(title, id).run();
   return c.json({ message: 'Subject updated' });
 });
 
@@ -128,7 +131,8 @@ adminRoutes.post('/subjects/reorder', zValidator('json', ReorderSchema), async (
 
   if (!newRank) return c.json({ error: 'Invalid reorder request' }, 400);
 
-  await c.env.DB.prepare('UPDATE subjects SET rank = ? WHERE id = ?')
+  await c.env.bodhak
+    .prepare('UPDATE subjects SET rank = ? WHERE id = ?')
     .bind(newRank.toString(), id)
     .run();
   return c.json({ message: 'Subject reordered', newRank: newRank.toString() });
@@ -136,7 +140,7 @@ adminRoutes.post('/subjects/reorder', zValidator('json', ReorderSchema), async (
 
 adminRoutes.delete('/subjects/:id', async (c) => {
   const { id } = c.req.param();
-  await c.env.DB.prepare('DELETE FROM subjects WHERE id = ?').bind(id).run();
+  await c.env.bodhak.prepare('DELETE FROM subjects WHERE id = ?').bind(id).run();
   return c.json({ message: 'Subject deleted' });
 });
 
@@ -144,15 +148,15 @@ adminRoutes.delete('/subjects/:id', async (c) => {
 adminRoutes.post('/topics', zValidator('json', TopicSchema), async (c) => {
   const { title, subjectId } = c.req.valid('json');
 
-  const { results } = await c.env.DB.prepare(
-    'SELECT rank FROM topics WHERE subject_id = ? ORDER BY rank DESC LIMIT 1'
-  )
+  const { results } = await c.env.bodhak
+    .prepare('SELECT rank FROM topics WHERE subject_id = ? ORDER BY rank DESC LIMIT 1')
     .bind(subjectId)
     .all();
   const lastRank = results[0] ? LexoRank.parse((results[0] as { rank: string }).rank) : null;
   const newRank = lastRank ? lastRank.genNext() : LexoRank.middle();
 
-  await c.env.DB.prepare('INSERT INTO topics (title, subject_id, rank) VALUES (?, ?, ?)')
+  await c.env.bodhak
+    .prepare('INSERT INTO topics (title, subject_id, rank) VALUES (?, ?, ?)')
     .bind(title, subjectId, newRank.toString())
     .run();
   return c.json({ message: 'Topic created', rank: newRank.toString() }, 201);
@@ -161,7 +165,8 @@ adminRoutes.post('/topics', zValidator('json', TopicSchema), async (c) => {
 adminRoutes.put('/topics/:id', zValidator('json', TopicSchema), async (c) => {
   const { id } = c.req.param();
   const { title, subjectId } = c.req.valid('json');
-  await c.env.DB.prepare('UPDATE topics SET title = ?, subject_id = ? WHERE id = ?')
+  await c.env.bodhak
+    .prepare('UPDATE topics SET title = ?, subject_id = ? WHERE id = ?')
     .bind(title, subjectId, id)
     .run();
   return c.json({ message: 'Topic updated' });
@@ -173,7 +178,8 @@ adminRoutes.post('/topics/reorder', zValidator('json', ReorderSchema), async (c)
 
   if (!newRank) return c.json({ error: 'Invalid reorder request' }, 400);
 
-  await c.env.DB.prepare('UPDATE topics SET rank = ? WHERE id = ?')
+  await c.env.bodhak
+    .prepare('UPDATE topics SET rank = ? WHERE id = ?')
     .bind(newRank.toString(), id)
     .run();
   return c.json({ message: 'Topic reordered', newRank: newRank.toString() });
@@ -181,7 +187,7 @@ adminRoutes.post('/topics/reorder', zValidator('json', ReorderSchema), async (c)
 
 adminRoutes.delete('/topics/:id', async (c) => {
   const { id } = c.req.param();
-  await c.env.DB.prepare('DELETE FROM topics WHERE id = ?').bind(id).run();
+  await c.env.bodhak.prepare('DELETE FROM topics WHERE id = ?').bind(id).run();
   return c.json({ message: 'Topic deleted' });
 });
 
@@ -197,17 +203,15 @@ adminRoutes.post('/articles', zValidator('json', ArticleSchema), async (c) => {
     await createGitHubFile(c.env, filePath, content, `Added new article: ${title}`);
 
     // 2. Insert metadata into D1 database
-    const { results } = await c.env.DB.prepare(
-      'SELECT rank FROM articles WHERE topic_id = ? ORDER BY rank DESC LIMIT 1'
-    )
+    const { results } = await c.env.bodhak
+      .prepare('SELECT rank FROM articles WHERE topic_id = ? ORDER BY rank DESC LIMIT 1')
       .bind(topicId)
       .all();
     const lastRank = results[0] ? LexoRank.parse((results[0] as { rank: string }).rank) : null;
     const newRank = lastRank ? lastRank.genNext() : LexoRank.middle();
 
-    await c.env.DB.prepare(
-      'INSERT INTO articles (title, topic_id, file_path, rank) VALUES (?, ?, ?, ?)'
-    )
+    await c.env.bodhak
+      .prepare('INSERT INTO articles (title, topic_id, file_path, rank) VALUES (?, ?, ?, ?)')
       .bind(title, topicId, filePath, newRank.toString())
       .run();
 
@@ -223,7 +227,8 @@ adminRoutes.put('/articles/:id', zValidator('json', ArticleSchema), async (c) =>
   const { title, topicId, content } = c.req.valid('json');
 
   try {
-    const firstRow = await c.env.DB.prepare('SELECT file_path FROM articles WHERE id = ?')
+    const firstRow = await c.env.bodhak
+      .prepare('SELECT file_path FROM articles WHERE id = ?')
       .bind(id)
       .first<{ file_path: string }>();
     if (!firstRow) {
@@ -241,7 +246,8 @@ adminRoutes.put('/articles/:id', zValidator('json', ArticleSchema), async (c) =>
     await updateGitHubFile(c.env, filePath, content, `Updated article: ${title}`, fileSha);
 
     // 3. Update the D1 database
-    await c.env.DB.prepare('UPDATE articles SET title = ?, topic_id = ? WHERE id = ?')
+    await c.env.bodhak
+      .prepare('UPDATE articles SET title = ?, topic_id = ? WHERE id = ?')
       .bind(title, topicId, id)
       .run();
     return c.json({ message: 'Article updated' });
@@ -257,7 +263,8 @@ adminRoutes.post('/articles/reorder', zValidator('json', ReorderSchema), async (
 
   if (!newRank) return c.json({ error: 'Invalid reorder request' }, 400);
 
-  await c.env.DB.prepare('UPDATE articles SET rank = ? WHERE id = ?')
+  await c.env.bodhak
+    .prepare('UPDATE articles SET rank = ? WHERE id = ?')
     .bind(newRank.toString(), id)
     .run();
   return c.json({ message: 'Article reordered', newRank: newRank.toString() });
@@ -267,7 +274,8 @@ adminRoutes.delete('/articles/:id', async (c) => {
   const { id } = c.req.param();
 
   try {
-    const firstRow = await c.env.DB.prepare('SELECT file_path FROM articles WHERE id = ?')
+    const firstRow = await c.env.bodhak
+      .prepare('SELECT file_path FROM articles WHERE id = ?')
       .bind(id)
       .first<{ file_path: string }>();
     if (!firstRow) {
@@ -282,7 +290,7 @@ adminRoutes.delete('/articles/:id', async (c) => {
     }
 
     // 2. Delete the record from D1 database
-    await c.env.DB.prepare('DELETE FROM articles WHERE id = ?').bind(id).run();
+    await c.env.bodhak.prepare('DELETE FROM articles WHERE id = ?').bind(id).run();
 
     return c.json({ message: 'Article deleted' });
   } catch (err) {

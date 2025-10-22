@@ -6,7 +6,7 @@
 // automatically merge it into the global 'Env' type.
 // This is the idiomatic way to extend the worker's environment object.
 interface CloudflareBindings {
-  DB: D1Database;
+  bodhak: D1Database;
 
   // Secrets (injected via .dev.vars or wrangler secret put)
   JWT_SECRET: string;
