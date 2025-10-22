@@ -308,3 +308,6 @@ app.delete('/api/admin/articles/:id', async (c) => {
 });
 
 export default app;
+
+// Export helper for unit tests
+export { calculateNewRank };

@@ -346,12 +346,14 @@ describe('D1 integration tests (isolated endpoints)', () => {
       body: JSON.stringify({ title: 't2', subjectId: subjId }),
     });
     expect(t2.status).toBe(201);
-    const tObj = await findTopic(subjId, 't1');
-    const tid = tObj?.id ?? null;
+    const t1Obj = await findTopic(subjId, 't1');
+    const t2Obj = await findTopic(subjId, 't2');
+    const tid = t1Obj?.id ?? null;
+    const afterRank2 = t2Obj?.rank ?? undefined;
     const reorderRes2 = await fetch('http://127.0.0.1:8787/api/admin/topics/reorder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ id: tid, afterRank: undefined }),
+      body: JSON.stringify({ id: tid, afterRank: afterRank2 }),
     });
     expect(reorderRes2.status).toBe(200);
     const b2 = await reorderRes2.json();
