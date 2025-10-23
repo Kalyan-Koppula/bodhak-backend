@@ -14,6 +14,7 @@ interface CloudflareBindings {
   GITHUB_REPO_OWNER: string;
   GITHUB_REPO_NAME: string;
   GITHUB_REPO_BRANCH?: string;
+  HEALTH_CHECK_DB?: string;
   ADMIN_PASSWORD: string;
 
   // Variables (injected via wrangler.jsonc vars)

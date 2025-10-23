@@ -107,6 +107,32 @@ app.get('/api/topics/:topicId/articles', async (c) => {
   return c.json(mapped);
 });
 
+// Lightweight health check endpoint
+// By default this does NOT touch the database. To enable a DB connectivity
+// check set the environment variable `HEALTH_CHECK_DB` to the string 'true'
+// (set this as a secret/var in Cloudflare or in your local env explicitly).
+app.get('/health', async (c) => {
+  const payload: Record<string, unknown> = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  };
+
+  if (String(c.env.HEALTH_CHECK_DB) === 'true') {
+    try {
+      // Minimal DB check - SELECT 1
+      await c.env.bodhak.prepare('SELECT 1').first();
+      payload.db = 'ok';
+    } catch (err) {
+      payload.db = 'error';
+      payload.dbError = err instanceof Error ? err.message : String(err);
+    }
+  } else {
+    payload.db = 'skipped';
+  }
+
+  return c.json(payload);
+});
+
 // ----------------------------------------
 // --- Admin API Routes (Protected) ---
 // ----------------------------------------
