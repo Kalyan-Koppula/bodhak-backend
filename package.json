@@ -3,7 +3,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "wrangler dev --env dev --remote",
-		"dev:local": "wrangler dev --port 8787",
+		"dev:local": "wrangler dev --env dev --local --port 8787",
 		"test": "vitest",
 		"test:e2e": "vitest run test/e2e --run",
 		"deploy:dev": "wrangler deploy --minify -e dev",

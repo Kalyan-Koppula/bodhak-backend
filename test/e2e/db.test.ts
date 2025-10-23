@@ -9,7 +9,8 @@ const execP = promisify(exec);
 async function runSql(sql: string) {
   // Escape double quotes in the SQL for CLI invocation
   const escaped = sql.replace(/"/g, '\\"');
-  const cmd = `node ./node_modules/wrangler/bin/wrangler.js d1 execute bodhak --local --command "${escaped}" --json`;
+  // Use the dev env mapping so the binding 'bodhak' is resolved from env.dev in wrangler.jsonc
+  const cmd = `node ./node_modules/wrangler/bin/wrangler.js d1 execute bodhak --env dev --local --command "${escaped}" --json`;
   const { stdout } = await execP(cmd);
   const out = stdout || '';
   try {
