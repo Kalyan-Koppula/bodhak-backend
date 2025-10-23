@@ -23,7 +23,7 @@
       // Cloudflare rate limiting binding for dev environment
       "ratelimits": [
         {
-          "name": "MY_RATE_LIMITER",
+          "name": "BODHAK_RATE_LIMITER",
           "namespace_id": "1001",
           "simple": { "limit": 60, "period": 60 },
         },
@@ -47,7 +47,7 @@
       // Cloudflare rate limiting binding for production environment
       "ratelimits": [
         {
-          "name": "MY_RATE_LIMITER",
+          "name": "BODHAK_RATE_LIMITER",
           "namespace_id": "1001",
           "simple": { "limit": 60, "period": 60 },
         },
