@@ -11,7 +11,7 @@ export async function startWranglerDev(): Promise<void> {
   // Ensure local D1 migrations are applied so the local binding exists
   try {
     // Use the local wrangler binary to avoid global deps
-    await execP('node ./node_modules/wrangler/bin/wrangler.js d1 migrations apply bodhak --local');
+    await execP('wrangler d1 migrations apply bodhak --local');
   } catch (err) {
     // Log migration errors but continue; tests may still run against an existing DB
     // eslint-disable-next-line no-console
