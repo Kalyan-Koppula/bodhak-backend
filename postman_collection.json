@@ -1,0 +1,310 @@
+{
+  "info": {
+    "name": "Bodhak Backend - API Collection",
+    "_postman_id": "b0dhak-collection-1234",
+    "description": "Postman collection for testing Bodhak backend API (public + admin). Uses collection variables for baseUrl, admin username/password and captures token cookie on login.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8787",
+      "type": "string",
+      "description": "Base URL for the Worker (change to your dev/prod url)"
+    },
+    {
+      "key": "adminUsername",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "password",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "JWT token extracted from Set-Cookie after login"
+    }
+  ],
+  "item": [
+    {
+      "name": "Public API",
+      "item": [
+        {
+          "name": "GET Subjects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/subjects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "subjects"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Topics for Subject",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/subjects/1/topics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "subjects",
+                "1",
+                "topics"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Articles for Topic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topics/1/articles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topics",
+                "1",
+                "articles"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin API",
+      "item": [
+        {
+          "name": "Admin - Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Extract token from Set-Cookie and store in collection variable 'token' (also set environment token if an environment is active).",
+                  "// Note: Cookies with 'Secure' attribute will not be sent over plain HTTP. If you are running on http://localhost,",
+                  "// the browser/Postman may store the Set-Cookie but it won't be attached to subsequent requests unless you use HTTPS or",
+                  "// send the Cookie header manually. This script saves the token so requests using Cookie: token={{token}} will work.",
+                  "const sc = pm.response.headers.get('Set-Cookie');",
+                  "if (sc) {",
+                  "  const m = sc.match(/token=([^;]+)/);",
+                  "  if (m) {",
+                  "    // Save to collection variables so {{token}} resolves even without an active environment",
+                  "    pm.collectionVariables.set('token', m[1]);",
+                  "    // Also attempt to set environment variable if present (harmless if no environment is active)",
+                  "    try { pm.environment.set('token', m[1]); } catch (e) { /* ignore */ },",
+                  "    console.log('Saved token to collection variable and environment');",
+                  "    pm.test('token saved', function() { pm.expect(m[1]).to.not.be.empty; });",
+                  "  } else {",
+                  "    pm.test('Set-Cookie contains token', function() { pm.expect.fail('token cookie not found'); });",
+                  "  }",
+                  "} else {",
+                  "  pm.test('Set-Cookie present', function() { pm.expect.fail('No Set-Cookie header'); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin - Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "token={{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"Test Subject from Postman\" }",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/admin/subjects", "host": ["{{baseUrl}}"], "path": ["api","admin","subjects"] }
+          }
+        },
+        {
+          "name": "Update Subject",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "token={{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"title\": \"Updated Subject Title\" }", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/admin/subjects/1", "host": ["{{baseUrl}}"], "path": ["api","admin","subjects","1"] }
+          }
+        },
+        {
+          "name": "Reorder Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Cookie", "value": "token={{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"id\": 1, \"beforeRank\": \"0.0\", \"afterRank\": \"0.1\" }",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/admin/subjects/reorder", "host": ["{{baseUrl}}"], "path": ["api","admin","subjects","reorder"] }
+          }
+        },
+        {
+          "name": "Delete Subject",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Cookie", "value": "token={{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/admin/subjects/1", "host": ["{{baseUrl}}"], "path": ["api","admin","subjects","1"] }
+          }
+        },
+        {
+          "name": "Create Topic",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "token={{token}}" } ],
+            "body": { "mode": "raw", "raw": "{ \"title\": \"Test Topic\", \"subjectId\": 1 }", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/admin/topics", "host": ["{{baseUrl}}"], "path": ["api","admin","topics"] }
+          }
+        },
+        {
+          "name": "Update Topic",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "token={{token}}" } ],
+            "body": { "mode": "raw", "raw": "{ \"title\": \"Updated Topic\", \"subjectId\": 1 }", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/admin/topics/1", "host": ["{{baseUrl}}"], "path": ["api","admin","topics","1"] }
+          }
+        },
+        {
+          "name": "Reorder Topic",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "token={{token}}" } ],
+            "body": { "mode": "raw", "raw": "{ \"id\": 1, \"beforeRank\": \"0.0\", \"afterRank\": \"0.1\" }", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/admin/topics/reorder", "host": ["{{baseUrl}}"], "path": ["api","admin","topics","reorder"] }
+          }
+        },
+        {
+          "name": "Delete Topic",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Cookie", "value": "token={{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/admin/topics/1", "host": ["{{baseUrl}}"], "path": ["api","admin","topics","1"] }
+          }
+        },
+        {
+          "name": "Create Article (mock GH)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "token={{token}}" }, { "key": "x-test-mock-gh", "value": "1" } ],
+            "body": { "mode": "raw", "raw": "{ \"title\": \"Postman Article\", \"topicId\": 1, \"content\": \"This is article content created via Postman.\" }", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/admin/articles", "host": ["{{baseUrl}}"], "path": ["api","admin","articles"] }
+          }
+        },
+        {
+          "name": "Update Article (mock GH)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "token={{token}}" }, { "key": "x-test-mock-gh", "value": "1" } ],
+            "body": { "mode": "raw", "raw": "{ \"title\": \"Updated Postman Article\", \"topicId\": 1, \"content\": \"Updated content from Postman.\" }", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/admin/articles/1", "host": ["{{baseUrl}}"], "path": ["api","admin","articles","1"] }
+          }
+        },
+        {
+          "name": "Reorder Article",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "token={{token}}" } ],
+            "body": { "mode": "raw", "raw": "{ \"id\": 1, \"beforeRank\": \"0.0\", \"afterRank\": \"0.1\" }", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/admin/articles/reorder", "host": ["{{baseUrl}}"], "path": ["api","admin","articles","reorder"] }
+          }
+        },
+        {
+          "name": "Delete Article (mock GH)",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Cookie", "value": "token={{token}}" }, { "key": "x-test-mock-gh", "value": "1" } ],
+            "url": { "raw": "{{baseUrl}}/api/admin/articles/1", "host": ["{{baseUrl}}"], "path": ["api","admin","articles","1"] }
+          }
+        }
+      ]
+    }
+  ]
+}

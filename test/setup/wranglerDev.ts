@@ -5,7 +5,7 @@ let proc: ChildProcess | null = null;
 
 export async function startWranglerDev(): Promise<void> {
   if (proc) return;
-  proc = spawn('node', ['./node_modules/wrangler/bin/wrangler.js', 'dev'], {
+  proc = spawn('wrangler', ['dev'], {
     cwd: process.cwd(),
     stdio: ['ignore', 'inherit', 'inherit'],
     env: { ...process.env, MOCK_GITHUB: '1' },

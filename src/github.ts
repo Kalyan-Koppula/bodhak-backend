@@ -8,6 +8,7 @@ const fetchOptions = (env: Env, method: string, body?: any) => ({
     'Content-Type': 'application/json',
     Accept: 'application/vnd.github.v3+json',
     'X-GitHub-Api-Version': '2022-11-28',
+    'USer-Agent': 'Bodhak-Backend',
   },
   body: body ? JSON.stringify(body) : undefined,
 });
