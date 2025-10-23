@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install dependencies
         run: npm ci
@@ -25,8 +25,42 @@ jobs:
       - name: Run unit tests
         run: npm test
 
+      - name: Create .dev.vars with dummy values
+        run: |
+          cat > .dev.vars <<'EOF'
+          ADMIN_USERNAME=dev_admin
+          ADMIN_PASSWORD=dev_password
+          GITHUB_TOKEN=ghp_dummy
+          GITHUB_REPO_OWNER=dev-owner
+          GITHUB_REPO_NAME=dev-repo
+          JWT_SECRET=dev_jwt_secret
+          HEALTH_CHECK_DB=false
+          EOF
+
+      - name: Start local dev server (dev:local) in background
+        run: |
+          # start dev server in background and save PID
+          nohup npm run dev:local > dev.log 2>&1 &
+          echo $! > .dev_pid
+          # wait for health endpoint to respond
+          for i in {1..60}; do
+            if curl --silent --head --fail http://localhost:8787/health; then
+              echo "dev server is up"; break
+            fi
+            echo "waiting for dev server... ($i)"
+            sleep 1
+          done
+
       - name: Run e2e tests
-        run: npm test:e2e
+        run: |
+          npm test:e2e
+
+      - name: Stop local dev server
+        if: always()
+        run: |
+          if [ -f .dev_pid ]; then
+            kill $(cat .dev_pid) || true
+          fi
 
       - name: Deploy to Cloudflare (production)
         env:
