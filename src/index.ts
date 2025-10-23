@@ -86,7 +86,25 @@ app.get('/api/topics/:topicId/articles', async (c) => {
     )
     .bind(topicId)
     .all<Article>();
-  return c.json(results);
+  // If GitHub repo owner/name are configured in environment, convert stored file_path
+  // into a raw GitHub URL so clients can fetch the article content directly.
+  const owner = c.env.GITHUB_REPO_OWNER || '';
+  const repo = c.env.GITHUB_REPO_NAME || '';
+  const branch = c.env.GITHUB_REPO_BRANCH ?? 'master';
+
+  const mapped = results.map((r) => {
+    if (owner && repo && r.file_path) {
+      // Ensure no leading slash on file_path
+      const fp = r.file_path.replace(/^\/+/, '');
+      return {
+        ...r,
+        file_path: `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${branch}/${fp}`,
+      };
+    }
+    return r;
+  });
+
+  return c.json(mapped);
 });
 
 // ----------------------------------------

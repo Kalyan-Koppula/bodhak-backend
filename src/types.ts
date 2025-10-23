@@ -13,6 +13,7 @@ interface CloudflareBindings {
   GITHUB_TOKEN: string;
   GITHUB_REPO_OWNER: string;
   GITHUB_REPO_NAME: string;
+  GITHUB_REPO_BRANCH?: string;
   ADMIN_PASSWORD: string;
 
   // Variables (injected via wrangler.jsonc vars)
