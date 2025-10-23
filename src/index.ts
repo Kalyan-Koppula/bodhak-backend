@@ -21,6 +21,45 @@ app.use(
   })
 );
 
+// Rate limiting middleware using Cloudflare's `ratelimits` binding (see docs)
+// Uses `env.BODHAK_RATE_LIMITER.limit({ key })` which returns an object containing
+// `{ success }`. The key should represent a stable user identifier (API key,
+// user id) or a path+user combination. We avoid relying only on IPs per
+// Cloudflare guidance.
+const rateLimitMiddleware = () => {
+  return async (c: any, next: any) => {
+    try {
+      const url = new URL(c.req.url);
+      const pathname = url.pathname;
+
+      // Prefer a user-specific key (Authorization header, cookie, etc.)
+      const auth = c.req.header('authorization') || c.req.header('cookie') || '';
+      const userKey = auth ? `auth:${auth}` : `ip:${c.req.header('cf-connecting-ip') || 'unknown'}`;
+
+      // Compose a key that scopes to the route to prevent global throttling
+      const key = `${userKey}|path:${pathname}`;
+
+      // Call the Cloudflare rate limit binding
+      // The binding exposes a `limit()` method returning { success: boolean }
+      const result = await c.env.BODHAK_RATE_LIMITER.limit({ key });
+      const success = result?.success;
+      if (!success) {
+        return c.json({ error: 'Rate limit exceeded' }, 429);
+      }
+
+      return next();
+    } catch (err) {
+      // On any error, fail open to avoid blocking legitimate traffic
+      // eslint-disable-next-line no-console
+      console.warn('Rate limiter error, allowing request:', String(err));
+      return next();
+    }
+  };
+};
+
+// Apply rate limiting to API routes (single global rule via BODHAK_RATE_LIMITER)
+app.use('/api/*', rateLimitMiddleware());
+
 // --- Schemas for Validation ---
 const SubjectSchema = z.object({ title: z.string().min(1) });
 const TopicSchema = z.object({ title: z.string().min(1), subjectId: z.number().int() });

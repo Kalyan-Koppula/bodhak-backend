@@ -7,6 +7,9 @@
 // This is the idiomatic way to extend the worker's environment object.
 interface CloudflareBindings {
   bodhak: D1Database;
+  // Cloudflare rate limit binding (see docs: runtime-apis/bindings/rate-limit)
+  // The runtime exposes a `.limit()` method on this binding.
+  BODHAK_RATE_LIMITER: any;
 
   // Secrets (injected via .dev.vars or wrangler secret put)
   JWT_SECRET: string;
