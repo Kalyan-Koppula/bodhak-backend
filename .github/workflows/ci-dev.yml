@@ -14,6 +14,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create .dev.vars (dummy)
+        run: |
+          cat > .dev.vars <<'EOF'
+            ADMIN_USERNAME=dev_admin
+            ADMIN_PASSWORD=dev_password
+            JWT_SECRET=dev_jwt_secret
+            GITHUB_TOKEN=ghp_dummy_token
+            GITHUB_REPO_OWNER=example-owner
+            GITHUB_REPO_NAME=example-repo
+            GITHUB_REPO_BRANCH=main
+            HEALTH_CHECK_DB=false
+          EOF
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
